@@ -1,0 +1,37 @@
+- name: Stop PostgreSQL
+  service:
+    name: postgresql-10
+    state: stopped
+
+- name: Clear out data directory
+  shell: rm -rf /var/lib/pgsql/10/data/*
+
+- name: Create base backup
+  command: pg_basebackup -X stream -D /var/lib/pgsql/10/data -h {{ postgresrep_master_address }} -U replicator
+  become: yes
+  become_user: postgres
+
+- name: Create recovery.conf
+  template:
+    src: recovery.conf.j2
+    dest: /var/lib/pgsql/10/data/recovery.conf
+    owner: postgres
+    group: postgres
+    mode: 0644
+
+- name: Enable hot standby
+  lineinfile:
+    state: present
+    backup: yes
+    dest: /var/lib/pgsql/10/data/postgresql.conf
+    regexp: '^#?hot_standby = \w+(\s+#.*)'
+    line: 'hot_standby = yes\1'
+    backrefs: yes
+  become: yes
+  become_user: postgres
+
+- name: Start and enable PostgreSQL
+  service:
+    name: postgresql-10
+    state: started
+enabled: yes

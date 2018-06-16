@@ -1,0 +1,47 @@
+- hosts: my-host
+  tasks:
+   - name: add key 
+     apt_key: url=https://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc state=present
+   - name: Add Postgresql repo
+     apt_repository: repo='deb https://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' state=present
+ 
+   - name: Update apt cache
+     apt: update_cache=yes
+
+   - name: Install Poestgresl
+     apt: pkg={{ item }} 
+          state=present
+     with_items:
+       - postgresql-10
+       - postgresql-10-postgis-2.2
+       - postgresql-10-postgis-scripts
+       - zerofree
+       - pgdg-keyring
+       - postgresql-10-repmgr
+       - rsync
+       - ntp
+       - ntpdate
+       - xinetd
+       - git 
+       - iptables-persistent
+       - xtrabackup
+       - percona-toolkit
+       - python-psycopg2
+       - libpq-dev 
+   - name: Create postgresql conf files - postgesql/con
+     template: src=/etc/ansible/files/postgres/postgresql.conf dest=/etc/postgresql/10/main/postgresql.conf
+     notify:
+   - name: Create postgresql conf files - pg_hba
+     template: src=/etc/ansible/files/postgres/pg_hba.conf dest=/etc/postgresql/10/main/pg_hba.conf
+     notify:
+ 
+   - service: name=xinetd state=stopped
+   - service: name=xinetd state=started
+   - service: name=postgresql state=restarted
+ 
+- hosts: percona-test
+  sudo: yes
+  sudo_user: postgresuser
+ 
+  tasks:
+   - postgresql_user: db=postgresdb user=postgresuser password=password

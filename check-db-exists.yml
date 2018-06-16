@@ -1,0 +1,16 @@
+- name: Check database already exists
+  become: yes
+  become_user: postgresuser
+  shell: psql -l | grep my_database
+  ignore_errors: true
+  register: my_database_db_existence
+- debug: var=my_database_db_existence
+
+- name: Copy backup of the my-database database
+  shell: your-s3-command here
+  when: my_database_db_existence | failed
+
+- name: Restore my_database database on first run
+  become_user: postgresuser
+  shell: createdb -O my_user my_database && psql -d my_database -f /path/to/my_dump.sql
+  when: my_database_db_existence | failed

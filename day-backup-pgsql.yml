@@ -1,0 +1,15 @@
+- name: Create backup directories
+  file: owner=postgres group=postgres mode=0750 state=directory path={{ item }}
+  with_items:
+    - "{{ postgresql_backup_local_dir }}"
+    - "{{ postgresql_backup_local_dir }}/bin"
+    - "{{ postgresql_backup_active_dir }}"
+
+- name: Install backup scripts
+  template: src={{ item }}.j2 dest={{ postgresql_backup_local_dir }}/bin/{{ item }} owner=postgres group=postgres mode=0750
+  with_items:
+    - scheduled_backup.sh
+
+- name: Schedule backups
+  cron: name="PostgreSQL Backup" cron_file=ansible_postgresql_backup user=postgres day={{ postgresql_backup_day | default(omit) }}
+        job="{{ postgresql_backup_local_dir }}/bin/scheduled_backup.sh{{ ' && ' ~ postgresql_backup_post_command if postgresql_backup_post_command is defined else '' }}"
